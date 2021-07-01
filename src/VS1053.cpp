@@ -32,19 +32,19 @@
  */
 #include "VS1053.h"
 
-VS1053::VS1053(uint8_t _cs_pin, uint8_t _dcs_pin, uint8_t _dreq_pin)
-        : cs_pin(_cs_pin), dcs_pin(_dcs_pin), dreq_pin(_dreq_pin) {
+VS1053::VS1053(uint8_t _cs_pin, uint8_t _dcs_pin, uint8_t _dreq_pin, SPIClass *_pSPI)
+        : cs_pin(_cs_pin), dcs_pin(_dcs_pin), dreq_pin(_dreq_pin), pSPI(_pSPI) {
 }
 
 uint16_t VS1053::read_register(uint8_t _reg) const {
     uint16_t result;
 
     control_mode_on();
-    SPI.write(3);    // Read operation
-    SPI.write(_reg); // Register to write (0..0xF)
+    pSPI->write(3);    // Read operation
+    pSPI->write(_reg); // Register to write (0..0xF)
     // Note: transfer16 does not seem to work
-    result = (SPI.transfer(0xFF) << 8) | // Read 16 bits data
-             (SPI.transfer(0xFF));
+    result = (pSPI->transfer(0xFF) << 8) | // Read 16 bits data
+             (pSPI->transfer(0xFF));
     await_data_request(); // Wait for DREQ to be HIGH again
     control_mode_off();
     return result;
@@ -52,9 +52,9 @@ uint16_t VS1053::read_register(uint8_t _reg) const {
 
 void VS1053::writeRegister(uint8_t _reg, uint16_t _value) const {
     control_mode_on();
-    SPI.write(2);        // Write operation
-    SPI.write(_reg);     // Register to write (0..0xF)
-    SPI.write16(_value); // Send 16 bits data
+    pSPI->write(2);        // Write operation
+    pSPI->write(_reg);     // Register to write (0..0xF)
+    pSPI->write16(_value); // Send 16 bits data
     await_data_request();
     control_mode_off();
 }
@@ -71,7 +71,7 @@ void VS1053::sdi_send_buffer(uint8_t *data, size_t len) {
             chunk_length = vs1053_chunk_size;
         }
         len -= chunk_length;
-        SPI.writeBytes(data, chunk_length);
+        pSPI->writeBytes(data, chunk_length);
         data += chunk_length;
     }
     data_mode_off();
@@ -90,7 +90,7 @@ void VS1053::sdi_send_fillers(size_t len) {
         }
         len -= chunk_length;
         while (chunk_length--) {
-            SPI.write(endFillByte);
+            pSPI->write(endFillByte);
         }
     }
     data_mode_off();
